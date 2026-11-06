@@ -403,6 +403,19 @@ body.locked>header,body.locked>main,body.locked>footer,body.locked>.pet{display:
 .lgc{width:100%;max-width:400px}
 .lnk2{background:none;border:0;color:var(--mute);text-decoration:underline;cursor:pointer;font:inherit;font-size:12px}
 body[data-role="user"] [data-t="mas"],body[data-role="user"] [data-t="sql"],body[data-role="user"] #mas,body[data-role="user"] #sql{display:none!important}
+.fbn{grid-column:1/-1;display:none;flex-wrap:wrap;gap:10px 18px;align-items:center;border-left:6px solid var(--fc,var(--acc));padding:14px 18px}
+.fbn.on{display:flex}
+.fbn .fi{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:14px}
+.fbn .fi b{font-size:14px}
+.nwl{list-style:none;margin:0;padding:0}
+.nwl li{padding:9px 0;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:2px}
+.nwl a{color:var(--ink);text-decoration:none;font-weight:600;font-size:14px;line-height:1.35}
+.nwl a:hover{color:var(--acc);text-decoration:underline}
+.nwl span{font-size:12px;color:var(--mute)}
+.cm{padding:10px 0;border-top:1px solid var(--line)}
+.cm b{display:block;font-size:14px}
+.cm .sc{font-size:13px;color:var(--ink);margin-top:3px;font-variant-numeric:tabular-nums}
+.cm .st{font-size:12px;color:var(--mute)}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -427,7 +440,7 @@ body[data-role="user"] [data-t="mas"],body[data-role="user"] [data-t="sql"],body
 </header>
 <main>
 
-<section class="tab on" id="dash"><div class="dgrid">
+<section class="tab on" id="dash"><div class="dgrid"><div class="card fbn" id="festBanner" role="status" aria-live="polite"></div>
   <div class="hero sp8">
     <div>
       <div class="hl"><span id="d_greet">Welcome</span><span id="d_name"></span></div>
@@ -450,7 +463,7 @@ body[data-role="user"] [data-t="mas"],body[data-role="user"] [data-t="sql"],body
   <div class="card sp4"><h3>Top businesses</h3><div id="d_biz"></div></div>
   <div class="card sp4"><h3>By product</h3><div id="d_prod"></div></div>
   <div class="card sp4"><h3>Source and type</h3><div id="d_src"></div><div id="d_ir" style="margin-top:14px"></div></div>
-</div></section>
+<div class="card sp8" id="newsCard"><div class="dh"><h3>Top news</h3><div class="seg" id="newsTabs" role="tablist"><button type="button" data-n="in" class="on">India</button><button type="button" data-n="tg">Telangana</button><button type="button" data-n="ap">Andhra Pradesh</button></div></div><div id="newsBody"><p class="muted">Loading news...</p></div><p class="muted" style="font-size:11px;margin:10px 0 0">Headlines from Google News. Opens the full story in a new tab.</p></div><div class="card sp4" id="cricCard"><div class="dh"><h3>Live cricket</h3><span class="muted" style="font-size:12px">updates every 5 min</span></div><div id="cricBody"><p class="muted">Loading scores...</p></div></div></div></section>
 
 <section class="tab" id="entry"><div class="cols">
     <div class="card fcard">
@@ -1404,6 +1417,129 @@ $("#s_save").onclick=()=>{
   sqlSave(q);$("#sqlDlg").close();renderSql();toast("Query saved");
 };
 
+
+// ---------- festivals, birthdays and national days (Indian calendar) ----------
+// Dates are checked against published Hindu calendars. Lunar festivals can move by a day, so check your local panchang
+// for the exact day and edit these lists whenever you like. Format: ["YYYY-MM-DD", name, colour, greeting, type]
+var FEST=[
+["2026-01-14","Makar Sankranti / Pongal","#d97706","Wishing you a harvest of happiness. Happy Sankranti!","fest"],
+["2026-01-26","Republic Day","#ff9933","Happy Republic Day! Jai Hind.","natl"],
+["2026-02-02","Vasant Panchami","#eab308","Happy Vasant Panchami! May wisdom and light guide you.","fest"],
+["2026-02-16","Maha Shivaratri","#4f46e5","Om Namah Shivaya. Happy Maha Shivaratri!","fest"],
+["2026-03-03","Holi","#ec4899","Happy Holi! Wishing you colours of joy.","fest"],
+["2026-03-19","Ugadi / Gudi Padwa","#16a34a","Happy Ugadi! A prosperous new year to you.","fest"],
+["2026-03-27","Ram Navami","#f97316","Jai Shri Ram. Happy Ram Navami!","fest"],
+["2026-08-15","Independence Day","#16a34a","Happy Independence Day! Jai Hind.","natl"],
+["2026-08-28","Raksha Bandhan","#e11d48","Happy Raksha Bandhan! Wishing you a bond full of love.","fest"],
+["2026-09-04","Krishna Janmashtami","#0ea5e9","Happy Janmashtami! Hare Krishna.","fest"],
+["2026-09-14","Ganesh Chaturthi","#f59e0b","Ganpati Bappa Morya! Happy Ganesh Chaturthi.","fest"],
+["2026-10-02","Gandhi Jayanti","#92400e","Happy Gandhi Jayanti.","natl"],
+["2026-10-20","Dussehra","#dc2626","Happy Dussehra! Victory of good over evil.","fest"],
+["2026-11-06","Dhanteras","#b45309","Happy Dhanteras! May prosperity find you.","fest"],
+["2026-11-07","Naraka Chaturdashi","#9333ea","Happy Choti Diwali!","fest"],
+["2026-11-08","Diwali","#f59e0b","Happy Diwali! May the festival of lights brighten your year.","fest"],
+["2026-11-10","Bhai Dooj","#db2777","Happy Bhai Dooj!","fest"],
+["2026-12-25","Christmas","#15803d","Merry Christmas!","natl"],
+["2027-01-14","Makar Sankranti / Pongal","#d97706","Wishing you a harvest of happiness. Happy Sankranti!","fest"],
+["2027-01-23","Vasant Panchami","#eab308","Happy Vasant Panchami! May wisdom and light guide you.","fest"],
+["2027-01-26","Republic Day","#ff9933","Happy Republic Day! Jai Hind.","natl"],
+["2027-03-06","Maha Shivaratri","#4f46e5","Om Namah Shivaya. Happy Maha Shivaratri!","fest"],
+["2027-03-21","Holi","#ec4899","Happy Holi! Wishing you colours of joy.","fest"],
+["2027-04-08","Ugadi / Gudi Padwa","#16a34a","Happy Ugadi! A prosperous new year to you.","fest"],
+["2027-04-15","Ram Navami","#f97316","Jai Shri Ram. Happy Ram Navami!","fest"],
+["2027-08-15","Independence Day","#16a34a","Happy Independence Day! Jai Hind.","natl"],
+["2027-08-17","Raksha Bandhan","#e11d48","Happy Raksha Bandhan! Wishing you a bond full of love.","fest"],
+["2027-08-25","Krishna Janmashtami","#0ea5e9","Happy Janmashtami! Hare Krishna.","fest"],
+["2027-09-04","Ganesh Chaturthi","#f59e0b","Ganpati Bappa Morya! Happy Ganesh Chaturthi.","fest"],
+["2027-10-09","Dussehra","#dc2626","Happy Dussehra! Victory of good over evil.","fest"],
+["2027-10-29","Diwali","#f59e0b","Happy Diwali! May the festival of lights brighten your year.","fest"],
+["2027-12-25","Christmas","#15803d","Merry Christmas!","natl"]
+];
+// Birthdays and events repeat every year: ["MM-DD", name, greeting, type]
+var BDAYS=[
+["01-12","Swami Vivekananda's birth anniversary","Remembering Swami Vivekananda. Arise, awake, and stop not till the goal is reached.","evt"],
+["04-08","Allu Arjun","Happy birthday, Allu Arjun!","bday"],
+["04-14","Dr. B.R. Ambedkar Jayanti","Remembering Dr. B.R. Ambedkar on his birth anniversary.","evt"],
+["04-24","Sachin Tendulkar","Happy birthday, Sachin Tendulkar!","bday"],
+["06-02","Telangana Formation Day","Happy Telangana Formation Day! Jai Telangana.","evt"],
+["07-07","MS Dhoni","Happy birthday, MS Dhoni!","bday"],
+["08-09","Mahesh Babu","Happy birthday, Mahesh Babu!","bday"],
+["08-22","Chiranjeevi","Happy birthday, Chiranjeevi garu!","bday"],
+["09-02","Pawan Kalyan","Happy birthday, Pawan Kalyan!","bday"],
+["09-05","Teachers' Day","Thank you to every teacher who shaped you.","evt"],
+["10-11","Amitabh Bachchan","Happy birthday, Amitabh Bachchan ji!","bday"],
+["10-15","Dr. APJ Abdul Kalam","Remembering Dr. APJ Abdul Kalam on his birth anniversary.","bday"],
+["10-23","Prabhas","Happy birthday, Prabhas!","bday"],
+["11-01","Andhra Pradesh Formation Day","Happy Andhra Pradesh Formation Day!","evt"],
+["11-02","Shah Rukh Khan","Happy birthday, Shah Rukh Khan!","bday"],
+["11-05","Virat Kohli","Happy birthday, Virat Kohli!","bday"],
+["12-12","Rajinikanth","Happy birthday, Rajinikanth sir!","bday"]
+];
+var CRICKET_KEY="";   // free key from cricapi.com, paste between the quotes to see live scores
+var NEWS_FEEDS={in:["India",'https://news.google.com/rss?hl=en-IN&gl=IN&ceid=IN:en'],tg:["Telangana",'https://news.google.com/rss/search?q=Telangana&hl=en-IN&gl=IN&ceid=IN:en'],ap:["Andhra Pradesh",'https://news.google.com/rss/search?q=Andhra+Pradesh&hl=en-IN&gl=IN&ceid=IN:en']};
+var newsTab="in";
+
+function fkey(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function festUpcoming(days){
+  const out=[],now=new Date();
+  for(let i=0;i<=days;i++){
+    const dt=new Date(now.getFullYear(),now.getMonth(),now.getDate()+i),key=fkey(dt),md=key.slice(5);
+    (FEST||[]).forEach(f=>{if(f[0]===key)out.push({i,name:f[1],color:f[2],wish:f[3],type:f[4]})});
+    (BDAYS||[]).forEach(b=>{if(b[0]===md)out.push({i,name:b[1],color:b[3]==="bday"?"#7c3aed":"#0d9488",wish:b[2],type:b[3]})});
+  }
+  return out;
+}
+function festGreeting(){
+  const t=festUpcoming(0).filter(x=>x.i===0);
+  if(!t.length)return null;
+  const f=t.find(x=>x.type!=="bday")||t[0];
+  return f.type==="bday"?f.wish:"Happy "+f.name+"!";
+}
+function festRender(){
+  const el=document.getElementById("festBanner");if(!el)return;
+  const list=festUpcoming(7).sort((a,b)=>a.i-b.i);
+  const th=document.documentElement.dataset.theme,hero=document.querySelector("#dash .hero");
+  const todayF=list.find(x=>x.i===0);
+  if(hero){hero.style.background=(todayF&&!["dos","cmd","bw"].includes(th))?"linear-gradient(120deg,"+todayF.color+",#1f2937)":""}
+  if(!list.length){el.classList.remove("on");el.innerHTML="";return}
+  el.style.setProperty("--fc",list[0].color);
+  el.innerHTML='<b>Festivals and dates this week</b>'+list.slice(0,4).map(x=>{
+    const when=x.i===0?"Today":x.i===1?"Tomorrow":"In "+x.i+" days";
+    return '<span class="fi"><span class="chip">'+when+'</span><b>'+esc(x.name)+'</b><span class="muted">'+esc(x.wish)+'</span></span>';
+  }).join("");
+  el.classList.add("on");
+}
+// ---------- news and cricket ----------
+async function loadNews(){
+  const body=document.getElementById("newsBody");if(!body)return;
+  const f=NEWS_FEEDS[newsTab],url="https://api.rss2json.com/v1/api.json?rss_url="+encodeURIComponent(f[1]);
+  try{
+    const d=await(await fetch(url)).json();
+    if(d.status!=="ok"||!Array.isArray(d.items))throw 0;
+    body.innerHTML='<ul class="nwl">'+d.items.slice(0,6).map(it=>{
+      let when="";try{when=new Date(it.pubDate.replace(" ","T")+"Z").toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}catch(e){}
+      return '<li><a href="'+esc(it.link)+'" target="_blank" rel="noopener">'+esc(it.title)+'</a>'+(when?'<span>'+esc(when)+'</span>':'')+'</li>';
+    }).join("")+'</ul>';
+  }catch(e){
+    body.innerHTML='<p class="muted">Could not load '+esc(f[0])+' news right now. <a href="'+esc(f[1].replace("/rss/search?q=","/search?q=").replace("/rss?","/?"))+'" target="_blank" rel="noopener">Open Google News</a></p>';
+  }
+}
+$$("#newsTabs button").forEach(b=>b.onclick=()=>{newsTab=b.dataset.n;$$("#newsTabs button").forEach(x=>x.classList.toggle("on",x===b));loadNews()});
+async function loadCricket(){
+  const body=document.getElementById("cricBody");if(!body)return;
+  if(!CRICKET_KEY){body.innerHTML='<p class="muted" style="font-size:13px">Live scores need a free key from cricapi.com. Paste it into CRICKET_KEY in the page code, then refresh.</p>';return}
+  try{
+    const d=await(await fetch("https://api.cricapi.com/v1/currentMatches?apikey="+encodeURIComponent(CRICKET_KEY)+"&offset=0")).json();
+    if(d.status!=="success"||!Array.isArray(d.data))throw d.reason||"No data";
+    const m=d.data.filter(x=>x.name);
+    body.innerHTML=m.length?m.slice(0,5).map(x=>'<div class="cm"><b>'+esc(x.name)+'</b>'+
+      (Array.isArray(x.score)&&x.score.length?'<div class="sc">'+x.score.map(s=>esc(s.inning||"")+": "+esc(s.r)+"/"+esc(s.w)+" ("+esc(s.o)+" ov)").join("<br>")+'</div>':'')+
+      '<div class="st">'+esc(x.status||"")+'</div></div>').join(""):'<p class="muted" style="font-size:13px">No matches live right now.</p>';
+  }catch(e){body.innerHTML='<p class="muted" style="font-size:13px">Could not load live scores ('+esc(String(e))+').</p>'}
+}
+setInterval(loadNews,15*60e3);setInterval(loadCricket,5*60e3);setInterval(festRender,60e3);
+loadNews();loadCricket();festRender();
+
 // records
 $("#r_day").value=today();$("#r_month").value=today().slice(0,7);
 $("#r_day").oninput=$("#r_month").oninput=()=>renderRec();
@@ -1626,7 +1762,7 @@ function tick(){
   $("#clk_d").textContent=n.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short",year:"numeric"});
   const tm=n.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"}),hr=n.getHours();
   $("#clk_t").textContent=tm;$("#d_time").textContent=tm;
-  $("#d_greet").textContent=hr<12?"Good morning":hr<16?"Good afternoon":"Good evening";
+  $("#d_greet").textContent=festGreeting()||(hr<12?"Good morning":hr<16?"Good afternoon":"Good evening");
   $("#d_date").textContent=n.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
   if(today()!==lastDay)rollDay();else ensureToday()
 }
