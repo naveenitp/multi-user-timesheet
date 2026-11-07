@@ -420,6 +420,10 @@ body[data-role="user"] [data-t="mas"],body[data-role="user"] [data-t="sql"],body
 .fbn .fi{font-size:13px;gap:6px}
 .fbn .fi b{font-size:13px}
 .fbn .fi .chip{font-size:12px;padding:2px 9px}
+#newsBody,#cricBody{max-height:220px;overflow-y:auto;padding-right:6px;overscroll-behavior:contain}
+#newsCard,#cricCard{padding:16px 18px}
+#newsBody .nwl li{padding:7px 0}
+#newsBody .nwl a{font-size:13px}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -1479,7 +1483,7 @@ var BDAYS=[
 ["11-05","Virat Kohli","Happy birthday, Virat Kohli!","bday"],
 ["12-12","Rajinikanth","Happy birthday, Rajinikanth sir!","bday"]
 ];
-var CRICKET_KEY="";   // free key from cricapi.com, paste between the quotes to see live scores
+var CRICKET_KEY="0fbc1353-5343-4043-8f4a-c2a8aec2840d";   // free key from cricapi.com, paste between the quotes to see live scores
 var NEWS_FEEDS={in:["India",'https://news.google.com/rss?hl=en-IN&gl=IN&ceid=IN:en'],tg:["Telangana",'https://news.google.com/rss/search?q=Telangana&hl=en-IN&gl=IN&ceid=IN:en'],ap:["Andhra Pradesh",'https://news.google.com/rss/search?q=Andhra+Pradesh&hl=en-IN&gl=IN&ceid=IN:en']};
 var newsTab="in";
 
