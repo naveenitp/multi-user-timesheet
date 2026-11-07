@@ -442,6 +442,19 @@ body[data-role="user"] [data-t="mas"],body[data-role="user"] [data-t="sql"],body
 #dcAdd.on{display:flex}
 #dcAdd button{border:1px dashed var(--acc);background:none;color:var(--acc);border-radius:99px;padding:5px 12px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
 #dcAdd button:hover{background:var(--acc2)}
+#cricFlash{position:fixed;right:18px;bottom:86px;z-index:75;width:300px;max-width:calc(100vw - 36px);background:var(--card);color:var(--ink);border:1px solid var(--line);border-left:5px solid #16a34a;border-radius:var(--r);box-shadow:0 12px 30px rgba(0,0,0,.25);padding:12px 14px;display:none;font-size:13px}
+#cricFlash.on{display:block;animation:cfIn .4s ease}
+@keyframes cfIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.cf-h{display:flex;align-items:center;gap:8px}
+.cf-h b{flex:1;font-size:13px;line-height:1.3}
+.cf-h button{border:0;background:none;color:var(--mute);font-size:20px;line-height:1;cursor:pointer;padding:0 2px}
+.cf-live{background:#dc2626;color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;letter-spacing:.5px;animation:cfPulse 1.4s infinite;display:inline-block;vertical-align:middle;margin-left:4px}
+@keyframes cfPulse{50%{opacity:.55}}
+.cf-s{font-size:16px;font-weight:800;margin-top:6px;font-variant-numeric:tabular-nums}
+.cf-st{font-size:12px;color:var(--mute);margin-top:3px}
+.cricsec{font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--acc);margin:2px 0 2px}
+.cricsec2 summary{cursor:pointer;font-size:12px;color:var(--mute);padding:8px 0;border-top:1px solid var(--line)}
+@media(max-width:700px){.dw{grid-column:1/-1!important;min-height:0!important}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -466,7 +479,7 @@ body[data-role="user"] [data-t="mas"],body[data-role="user"] [data-t="sql"],body
 </header>
 <main>
 
-<section class="tab on" id="dash"><div class="dgrid"><div class="dcbar sp12" id="dcBar"><button type="button" class="btn sm ghost" id="dcEdit">Customise dashboard</button><div id="dcTools"><span class="muted" style="font-size:12px">Drag a widget by its &#9776; handle, or use the arrows. Remove with &times;, add back below.</span><button type="button" class="btn sm ghost" id="dcAddBtn">+ Add widget</button><button type="button" class="btn sm ghost" id="dcReset">Reset layout</button><button type="button" class="btn sm" id="dcDone">Done</button></div><div id="dcAdd"></div></div>
+<section class="tab on" id="dash"><div class="dgrid"><div class="dcbar sp12" id="dcBar"><button type="button" class="btn sm ghost" id="dcEdit" style="display:none">Customise dashboard</button><div id="dcTools"><span class="muted" style="font-size:12px">Drag a widget by its &#9776; handle, or use the arrows. Remove with &times;, add back below.</span><button type="button" class="btn sm ghost" id="dcAddBtn">+ Add widget</button><button type="button" class="btn sm ghost" id="dcReset">Reset layout</button><button type="button" class="btn sm" id="dcDone">Done</button></div><div id="dcAdd"></div></div>
 <div class="card fbn" id="festBanner" role="status" aria-live="polite"></div>
   <div class="hero sp8">
     <div>
@@ -634,6 +647,7 @@ body[data-role="user"] [data-t="mas"],body[data-role="user"] [data-t="sql"],body
     <p class="muted" style="font-size:11px;margin:6px 0 0">Pick image or GIF files from your computer. They stay in this browser only.</p></div>
   <div style="margin-top:12px"><div class="muted" style="font-size:13px;font-weight:600;margin-bottom:6px">Text colour</div><div class="sw" id="inkSw"></div></div>
   <p class="muted" style="font-size:11px;margin:12px 0 0">Animal pets and celebration stickers: Noto animated emoji by Google, CC BY 4.0. Anime-style pets are original drawings. Weather data: Open-Meteo.com (CC BY 4.0).</p>
+  <div class="row" style="margin-top:12px"><button class="btn ghost" id="styCust" type="button">Customise dashboard</button></div>
   <div class="row" style="margin-top:10px"><button class="btn" id="styX">Done</button></div>
 </dialog>
 <div class="toast" id="toast"></div>
@@ -1552,19 +1566,46 @@ async function loadNews(){
   }
 }
 $$("#newsTabs button").forEach(b=>b.onclick=()=>{newsTab=b.dataset.n;$$("#newsTabs button").forEach(x=>x.classList.toggle("on",x===b));loadNews()});
+const CRIC_RE=/\bindia\b|\bindian\b|\bipl\b|indian premier league|mumbai indians|chennai super kings|royal challengers|kolkata knight riders|sunrisers|rajasthan royals|delhi capitals|punjab kings|gujarat titans|lucknow super giants/i;
+function cricPrimary(m){return CRIC_RE.test([m.name,m.series_id,m.matchType,(Array.isArray(m.teams)?m.teams.join(" "):"")].join(" "))}
+function cricLive(m){return !!(m.matchStarted&&!m.matchEnded)}
+function cricCardHTML(m){
+  const sc=Array.isArray(m.score)&&m.score.length?'<div class="sc">'+m.score.map(s=>esc(s.inning||"")+": "+esc(s.r)+"/"+esc(s.w)+" ("+esc(s.o)+" ov)").join("<br>")+'</div>':'';
+  return '<div class="cm"><b>'+esc(m.name)+(cricLive(m)?' <span class="cf-live">LIVE</span>':'')+'</b>'+sc+'<div class="st">'+esc(m.status||"")+'</div></div>';
+}
+var cricDismissed=new Set(),cricTimer=null;
+function cricFlash(list){
+  const f=document.getElementById("cricFlash");if(!f)return;
+  const m=list.find(x=>!cricDismissed.has(x.id||x.name));
+  if(!m){f.classList.remove("on");return}
+  f.innerHTML='<div class="cf-h"><span class="cf-live">LIVE</span><b>'+esc(m.name)+'</b><button type="button" aria-label="Close live score">&times;</button></div>'+
+    (Array.isArray(m.score)&&m.score.length?'<div class="cf-s">'+m.score.map(s=>esc(s.r)+"/"+esc(s.w)+" ("+esc(s.o)+")").join(" &middot; ")+'</div>':'')+
+    '<div class="cf-st">'+esc(m.status||"")+'</div>';
+  f.querySelector("button").onclick=()=>{cricDismissed.add(m.id||m.name);f.classList.remove("on")};
+  f.classList.add("on");
+}
 async function loadCricket(){
   const body=document.getElementById("cricBody");if(!body)return;
   if(!CRICKET_KEY){body.innerHTML='<p class="muted" style="font-size:13px">Live scores need a free key from cricapi.com. Paste it into CRICKET_KEY in the page code, then refresh.</p>';return}
+  let next=15*60e3;
   try{
     const d=await(await fetch("https://api.cricapi.com/v1/currentMatches?apikey="+encodeURIComponent(CRICKET_KEY)+"&offset=0")).json();
     if(d.status!=="success"||!Array.isArray(d.data))throw d.reason||"No data";
-    const m=d.data.filter(x=>x.name);
-    body.innerHTML=m.length?m.slice(0,5).map(x=>'<div class="cm"><b>'+esc(x.name)+'</b>'+
-      (Array.isArray(x.score)&&x.score.length?'<div class="sc">'+x.score.map(s=>esc(s.inning||"")+": "+esc(s.r)+"/"+esc(s.w)+" ("+esc(s.o)+" ov)").join("<br>")+'</div>':'')+
-      '<div class="st">'+esc(x.status||"")+'</div></div>').join(""):'<p class="muted" style="font-size:13px">No matches live right now.</p>';
-  }catch(e){body.innerHTML='<p class="muted" style="font-size:13px">Could not load live scores ('+esc(String(e))+').</p>'}
+    const all=d.data.filter(m=>m&&m.name);
+    const prim=all.filter(cricPrimary),other=all.filter(m=>!cricPrimary(m));
+    const liveP=prim.filter(cricLive);
+    body.innerHTML=(prim.length?'<div class="cricsec">India &amp; IPL</div>'+prim.map(cricCardHTML).join(""):'<p class="muted" style="font-size:13px">No India or IPL matches right now.</p>')+
+      (other.length?'<details class="cricsec2"><summary>Other matches ('+other.length+')</summary>'+other.slice(0,6).map(cricCardHTML).join("")+'</details>':'');
+    cricFlash(liveP);
+    if(liveP.length)next=4*60e3;
+  }catch(e){
+    body.innerHTML='<p class="muted" style="font-size:13px">Could not load live scores ('+esc(String(e))+').</p>';
+  }
+  clearTimeout(cricTimer);cricTimer=setTimeout(loadCricket,next);
 }
-setInterval(loadNews,15*60e3);setInterval(loadCricket,5*60e3);setInterval(festRender,60e3);
+setInterval(loadNews,15*60e3);setInterval(festRender,60e3);
+if(!document.getElementById("cricFlash")){const f=document.createElement("div");f.id="cricFlash";f.setAttribute("role","status");f.setAttribute("aria-live","polite");document.body.appendChild(f)}
+$("#styCust").onclick=()=>{$("#sty").close();$('#nav [data-t="dash"]').click();if(!dashEdit)dashSetEdit(true)};
 loadNews();loadCricket();festRender();
 
 
@@ -1588,7 +1629,7 @@ function dashGrid(){return document.querySelector("#dash .dgrid")}
 function dashWidgets(){const g=dashGrid();return g?[...g.children].filter(el=>el.dataset&&el.dataset.wid):[]}
 function dashApplyHidden(){dashWidgets().forEach(el=>el.classList.toggle("dash-hidden",dashHidden.has(el.dataset.wid)))}
 function dashSave(){
-  try{localStorage.setItem(DASH_KEY,JSON.stringify({order:dashWidgets().map(el=>el.dataset.wid),hidden:[...dashHidden]}))}catch(e){}
+  try{localStorage.setItem(DASH_KEY,JSON.stringify({order:dashWidgets().map(el=>el.dataset.wid),hidden:[...dashHidden],sizes:dashSizes}))}catch(e){}
   dashAddList();
 }
 function dashMove(el,dir){
@@ -1613,6 +1654,16 @@ function dashSetEdit(on){
   dashWidgets().forEach(el=>el.draggable=on);
   if(!on)dashSave();
 }
+const DW=[4,6,8,12],DH=[0,260,380,520];
+let dashSizes={};
+function dashCurW(el){const z=dashSizes[el.dataset.wid];if(z&&z.w)return z.w;return el.classList.contains("sp4")?4:el.classList.contains("sp8")?8:12}
+function dashSizeApply(el){const z=dashSizes[el.dataset.wid]||{};el.style.gridColumn=z.w?"span "+z.w:"";el.style.minHeight=z.h?z.h+"px":""}
+function dashResize(el,what){
+  const k=el.dataset.wid,z=dashSizes[k]||{};
+  if(what==="w"){const i=DW.indexOf(dashCurW(el));z.w=DW[(i+1)%DW.length]}
+  else{const i=DH.indexOf(z.h||0);z.h=DH[(i+1)%DH.length]}
+  dashSizes[k]=z;dashSizeApply(el);dashSave();
+}
 function dashInit(){
   const g=dashGrid();if(!g)return;
   const els=[...g.children].filter(el=>el.id!=="dcBar");
@@ -1620,7 +1671,7 @@ function dashInit(){
     const k=wkey(el);if(!k)return;
     el.dataset.wid=k;el.classList.add("dw");
     const c=document.createElement("div");c.className="dwc";c.setAttribute("aria-label","Widget controls");
-    c.innerHTML='<span title="Drag to move" aria-label="Drag to move">&#9776;</span><button type="button" data-a="up" title="Move up" aria-label="Move up">&#8593;</button><button type="button" data-a="down" title="Move down" aria-label="Move down">&#8595;</button><button type="button" class="x" data-a="remove" title="Remove from dashboard" aria-label="Remove from dashboard">&times;</button>';
+    c.innerHTML='<span title="Drag to move" aria-label="Drag to move">&#9776;</span><button type="button" data-a="up" title="Move up" aria-label="Move up">&#8593;</button><button type="button" data-a="down" title="Move down" aria-label="Move down">&#8595;</button><button type="button" data-a="w" title="Change width" aria-label="Change width">&#8596;</button><button type="button" data-a="h" title="Change height" aria-label="Change height">&#8597;</button><button type="button" class="x" data-a="remove" title="Remove from dashboard" aria-label="Remove from dashboard">&times;</button>';
     el.appendChild(c);
     if(k==="kpis"){   // the KPI cards are redrawn on every refresh, so put the controls back whenever they are removed
       new MutationObserver(()=>{if(![...el.children].some(x=>x.classList.contains("dwc")))el.appendChild(c)}).observe(el,{childList:true});
@@ -1632,6 +1683,7 @@ function dashInit(){
   const order=(Array.isArray(L.order)?L.order.filter(k=>have.has(k)):[]).concat(dashDefault.filter(k=>!(Array.isArray(L.order)&&L.order.includes(k))));
   order.forEach(k=>{const el=g.querySelector('[data-wid="'+k+'"]');if(el)g.appendChild(el)});
   dashHidden=new Set((L.hidden||[]).filter(k=>have.has(k)));
+  dashSizes=L.sizes||{};dashWidgets().forEach(dashSizeApply);
   dashApplyHidden();dashAddList();
   dashSave();
 }
@@ -1644,7 +1696,7 @@ function dashInit(){
   document.getElementById("dcAddBtn").onclick=()=>{if(!dashEdit)dashSetEdit(true);document.getElementById("dcAdd").scrollIntoView({block:"nearest"})};
   document.getElementById("dcReset").onclick=()=>{
     if(!confirm("Reset the dashboard to its original layout and show every widget?"))return;
-    dashHidden=new Set();dashDefault.forEach(k=>{const el=g.querySelector('[data-wid="'+k+'"]');if(el)g.appendChild(el)});
+    dashHidden=new Set();dashSizes={};dashWidgets().forEach(dashSizeApply);dashDefault.forEach(k=>{const el=g.querySelector('[data-wid="'+k+'"]');if(el)g.appendChild(el)});
     dashApplyHidden();dashSave();toast("Dashboard layout reset");
   };
   g.addEventListener("click",e=>{
@@ -1654,6 +1706,7 @@ function dashInit(){
     if(a==="up")dashMove(el,-1);
     else if(a==="down")dashMove(el,1);
     else if(a==="remove"){dashHidden.add(el.dataset.wid);dashApplyHidden();dashSave()}
+    else if(a==="w"||a==="h"){dashResize(el,a)}
   });
   document.getElementById("dcAdd").addEventListener("click",e=>{
     const b=e.target.closest&&e.target.closest("button[data-k]");if(!b)return;
