@@ -424,6 +424,24 @@ body[data-role="user"] [data-t="mas"],body[data-role="user"] [data-t="sql"],body
 #newsCard,#cricCard{padding:16px 18px}
 #newsBody .nwl li{padding:7px 0}
 #newsBody .nwl a{font-size:13px}
+.dash-hidden{display:none!important}
+.dw{position:relative}
+.dwc{display:none;position:absolute;top:6px;right:6px;z-index:6;gap:2px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:2px 4px;box-shadow:var(--shb)}
+.dgrid.editing .dwc{display:inline-flex}
+.dgrid.editing .dw{outline:2px dashed var(--acc);outline-offset:4px}
+.dgrid.editing .dw[draggable="true"]{cursor:grab}
+.dgrid.editing .dw.dragging{opacity:.45}
+.dwc button,.dwc span{border:0;background:none;color:var(--ink);font:inherit;font-size:14px;line-height:1;padding:4px 7px;cursor:pointer;border-radius:6px}
+.dwc span{cursor:grab;color:var(--mute);padding:4px 4px}
+.dwc button:hover,.dwc button:focus-visible{background:var(--acc2);outline:none}
+.dwc button.x:hover{color:var(--warn)}
+.dcbar{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center}
+#dcTools{display:none;flex-wrap:wrap;gap:8px 10px;align-items:center}
+#dcTools.on{display:flex}
+#dcAdd{display:none;flex-wrap:wrap;gap:8px;width:100%}
+#dcAdd.on{display:flex}
+#dcAdd button{border:1px dashed var(--acc);background:none;color:var(--acc);border-radius:99px;padding:5px 12px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
+#dcAdd button:hover{background:var(--acc2)}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -448,7 +466,8 @@ body[data-role="user"] [data-t="mas"],body[data-role="user"] [data-t="sql"],body
 </header>
 <main>
 
-<section class="tab on" id="dash"><div class="dgrid"><div class="card fbn" id="festBanner" role="status" aria-live="polite"></div>
+<section class="tab on" id="dash"><div class="dgrid"><div class="dcbar sp12" id="dcBar"><button type="button" class="btn sm ghost" id="dcEdit">Customise dashboard</button><div id="dcTools"><span class="muted" style="font-size:12px">Drag a widget by its &#9776; handle, or use the arrows. Remove with &times;, add back below.</span><button type="button" class="btn sm ghost" id="dcAddBtn">+ Add widget</button><button type="button" class="btn sm ghost" id="dcReset">Reset layout</button><button type="button" class="btn sm" id="dcDone">Done</button></div><div id="dcAdd"></div></div>
+<div class="card fbn" id="festBanner" role="status" aria-live="polite"></div>
   <div class="hero sp8">
     <div>
       <div class="hl"><span id="d_greet">Welcome</span><span id="d_name"></span></div>
@@ -1547,6 +1566,116 @@ async function loadCricket(){
 }
 setInterval(loadNews,15*60e3);setInterval(loadCricket,5*60e3);setInterval(festRender,60e3);
 loadNews();loadCricket();festRender();
+
+
+// ---------- customisable dashboard: drag to reorder, arrows, remove and add back ----------
+const DASH_KEY="hrms_mu_dash_layout";
+const WLABEL={fest:"Festival banner",hero:"Welcome & clock",util:"Today's utilisation",news:"Top news",cric:"Live cricket",perf:"Performance overview",kpis:"KPI cards",activity:"Activity chart",status:"Status breakdown",biz:"Top businesses",prod:"By product",src:"Source and type"};
+const WTITLE={"Today's utilisation":"util","Activity: hours per day":"activity","Status breakdown":"status","Top businesses":"biz","By product":"prod","Source and type":"src"};
+function wkey(el){
+  if(!el||!el.classList)return null;
+  if(el.id==="festBanner")return "fest";
+  if(el.id==="dcBar")return null;
+  if(el.classList.contains("hero"))return "hero";
+  if(el.id==="newsCard")return "news";
+  if(el.id==="cricCard")return "cric";
+  if(el.classList.contains("dbar"))return "perf";
+  if(el.classList.contains("kpis"))return "kpis";
+  const h=el.querySelector("h2,h3");return h?(WTITLE[h.textContent.trim()]||null):null;
+}
+let dashEdit=false,dashHidden=new Set(),dashDefault=[],dragEl=null,dashDrag=null;
+function dashGrid(){return document.querySelector("#dash .dgrid")}
+function dashWidgets(){const g=dashGrid();return g?[...g.children].filter(el=>el.dataset&&el.dataset.wid):[]}
+function dashApplyHidden(){dashWidgets().forEach(el=>el.classList.toggle("dash-hidden",dashHidden.has(el.dataset.wid)))}
+function dashSave(){
+  try{localStorage.setItem(DASH_KEY,JSON.stringify({order:dashWidgets().map(el=>el.dataset.wid),hidden:[...dashHidden]}))}catch(e){}
+  dashAddList();
+}
+function dashMove(el,dir){
+  let sib=dir<0?el.previousElementSibling:el.nextElementSibling;
+  while(sib&&!(sib.dataset&&sib.dataset.wid))sib=dir<0?sib.previousElementSibling:sib.nextElementSibling;
+  if(!sib)return;
+  if(dir<0)sib.before(el);else sib.after(el);
+  dashSave();
+}
+function dashAddList(){
+  const box=document.getElementById("dcAdd");if(!box)return;
+  const hidden=[...dashHidden].filter(k=>WLABEL[k]);
+  box.innerHTML=hidden.length?hidden.map(k=>'<button type="button" data-k="'+k+'">+ '+esc(WLABEL[k])+'</button>').join(""):'<span class="muted" style="font-size:13px">Every widget is on the dashboard.</span>';
+}
+function dashSetEdit(on){
+  dashEdit=on;const g=dashGrid(),b=document.getElementById("dcEdit");
+  g.classList.toggle("editing",on);
+  document.getElementById("dcTools").classList.toggle("on",on);
+  document.getElementById("dcAdd").classList.toggle("on",on);
+  b.textContent=on?"Done customising":"Customise dashboard";
+  b.classList.toggle("on",on);
+  dashWidgets().forEach(el=>el.draggable=on);
+  if(!on)dashSave();
+}
+function dashInit(){
+  const g=dashGrid();if(!g)return;
+  const els=[...g.children].filter(el=>el.id!=="dcBar");
+  els.forEach(el=>{
+    const k=wkey(el);if(!k)return;
+    el.dataset.wid=k;el.classList.add("dw");
+    const c=document.createElement("div");c.className="dwc";c.setAttribute("aria-label","Widget controls");
+    c.innerHTML='<span title="Drag to move" aria-label="Drag to move">&#9776;</span><button type="button" data-a="up" title="Move up" aria-label="Move up">&#8593;</button><button type="button" data-a="down" title="Move down" aria-label="Move down">&#8595;</button><button type="button" class="x" data-a="remove" title="Remove from dashboard" aria-label="Remove from dashboard">&times;</button>';
+    el.appendChild(c);
+    if(k==="kpis"){   // the KPI cards are redrawn on every refresh, so put the controls back whenever they are removed
+      new MutationObserver(()=>{if(![...el.children].some(x=>x.classList.contains("dwc")))el.appendChild(c)}).observe(el,{childList:true});
+    }
+  });
+  dashDefault=dashWidgets().map(el=>el.dataset.wid);
+  let L={order:null,hidden:[]};try{L=Object.assign(L,JSON.parse(localStorage.getItem(DASH_KEY))||{})}catch(e){}
+  const have=new Set(dashDefault);
+  const order=(Array.isArray(L.order)?L.order.filter(k=>have.has(k)):[]).concat(dashDefault.filter(k=>!(Array.isArray(L.order)&&L.order.includes(k))));
+  order.forEach(k=>{const el=g.querySelector('[data-wid="'+k+'"]');if(el)g.appendChild(el)});
+  dashHidden=new Set((L.hidden||[]).filter(k=>have.has(k)));
+  dashApplyHidden();dashAddList();
+  dashSave();
+}
+(function(){
+  const g=dashGrid();if(!g)return;
+  dashInit();
+  const bar=document.getElementById("dcEdit");
+  bar.onclick=()=>dashSetEdit(!dashEdit);
+  document.getElementById("dcDone").onclick=()=>dashSetEdit(false);
+  document.getElementById("dcAddBtn").onclick=()=>{if(!dashEdit)dashSetEdit(true);document.getElementById("dcAdd").scrollIntoView({block:"nearest"})};
+  document.getElementById("dcReset").onclick=()=>{
+    if(!confirm("Reset the dashboard to its original layout and show every widget?"))return;
+    dashHidden=new Set();dashDefault.forEach(k=>{const el=g.querySelector('[data-wid="'+k+'"]');if(el)g.appendChild(el)});
+    dashApplyHidden();dashSave();toast("Dashboard layout reset");
+  };
+  g.addEventListener("click",e=>{
+    const b=e.target.closest&&e.target.closest(".dwc button");if(!b||!dashEdit)return;
+    const el=b.closest(".dw");if(!el)return;
+    const a=b.dataset.a;
+    if(a==="up")dashMove(el,-1);
+    else if(a==="down")dashMove(el,1);
+    else if(a==="remove"){dashHidden.add(el.dataset.wid);dashApplyHidden();dashSave()}
+  });
+  document.getElementById("dcAdd").addEventListener("click",e=>{
+    const b=e.target.closest&&e.target.closest("button[data-k]");if(!b)return;
+    dashHidden.delete(b.dataset.k);dashApplyHidden();dashSave();
+  });
+  g.addEventListener("dragstart",e=>{
+    const el=e.target.closest&&e.target.closest(".dw");
+    if(!el||!dashEdit){e.preventDefault();return}
+    dragEl=el;el.classList.add("dragging");
+    if(e.dataTransfer){e.dataTransfer.effectAllowed="move";try{e.dataTransfer.setData("text/plain",el.dataset.wid)}catch(x){}}
+  });
+  g.addEventListener("dragover",e=>{
+    if(!dragEl)return;
+    const t=e.target.closest&&e.target.closest(".dw");
+    if(!t||t===dragEl)return;
+    e.preventDefault();
+    const r=t.getBoundingClientRect();
+    if(e.clientY<r.top+r.height/2)t.before(dragEl);else t.after(dragEl);
+  });
+  g.addEventListener("drop",e=>{if(dragEl)e.preventDefault()});
+  g.addEventListener("dragend",()=>{if(dragEl){dragEl.classList.remove("dragging");dragEl=null;dashSave()}});
+})();
 
 // records
 $("#r_day").value=today();$("#r_month").value=today().slice(0,7);
