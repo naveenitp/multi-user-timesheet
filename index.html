@@ -524,10 +524,10 @@ body[data-role="user"] [data-t="mas"],body[data-role="user"] [data-t="sql"],body
 .sub{min-width:0;overflow-wrap:anywhere;flex-wrap:wrap}
 #t_list .st{white-space:normal;max-width:100%}
 #t_list .rm{overflow-wrap:anywhere}
-.hbg{position:absolute!important;z-index:0!important;right:0;top:0;bottom:0;width:48%;pointer-events:none;overflow:hidden;border-radius:inherit}
-.hbgi{position:absolute;bottom:0;height:92%;width:auto;max-width:42%;object-fit:contain;opacity:.92;filter:drop-shadow(0 6px 10px rgba(0,0,0,.28));right:calc(var(--i,0) * 22%);transform:translateX(calc(var(--i,0) * 6%))}
+.hbg{position:absolute!important;z-index:0!important;inset:0;display:flex;align-items:flex-end;justify-content:center;pointer-events:none;overflow:hidden;border-radius:inherit}
+.hbgi{position:relative;height:92%;width:auto;max-width:34%;object-fit:contain;opacity:.9;filter:drop-shadow(0 6px 10px rgba(0,0,0,.28));margin:0 -8px;flex:0 1 auto}
 .hbgi:nth-child(1){z-index:3}.hbgi:nth-child(2){z-index:2;height:80%}.hbgi:nth-child(3){z-index:1;height:70%}
-@media(max-width:700px){.hbg{width:60%;opacity:.45}}
+@media(max-width:700px){.hbgi{max-width:44%}.hbg{opacity:.5}}
 .bgthumb{width:40px;height:40px;object-fit:cover;border-radius:6px;border:2px solid var(--line);vertical-align:middle}
 .bgrow{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
@@ -722,6 +722,7 @@ body[data-role="user"] [data-t="mas"],body[data-role="user"] [data-t="sql"],body
     <p class="muted" style="font-size:11px;margin:6px 0 0">Pick image or GIF files from your computer. They stay in this browser only.</p></div>
   <div style="margin-top:12px"><div class="muted" style="font-size:13px;font-weight:600;margin-bottom:6px">Welcome card characters</div>
     <label style="flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-weight:500"><input type="checkbox" id="bgOn" style="width:auto"> Show characters on the welcome card</label>
+    <label style="flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-weight:500;margin-top:6px"><input type="checkbox" id="bgCut" style="width:auto"> Remove the background from new images so they blend into the card</label>
     <div class="row" style="margin-top:8px"><button type="button" class="btn sm ghost" id="bgAdd">Add images or GIFs</button><button type="button" class="btn sm ghost" id="bgShuffle">Change which show</button></div>
     <input type="file" id="bgFile" accept="image/*" multiple style="display:none">
     <div class="muted" id="bgInfo" style="font-size:12px;margin-top:6px"></div>
@@ -1875,9 +1876,65 @@ function bgInfo(all,n){
   const mine=all.filter(r=>r.theme===bgKey()).sort((a,b)=>a.id-b.id);
   list.innerHTML=mine.map(r=>{const u=URL.createObjectURL(r.blob);bgThumbUrls.push(u);return '<div class="bgrow"><img class="bgthumb" alt="" src="'+u+'"><span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(r.name||"Image")+'</span><button type="button" class="tpx" data-id="'+r.id+'" aria-label="Remove image">&times;</button></div>'}).join("")||'<p class="muted" style="font-size:12px;margin:4px 0 0">No images for this theme yet. Add a few characters (images or GIFs) and they will appear on the welcome card.</p>';
 }
+
+// ---------- remove the background from uploaded characters so they blend into the card ----------
+function cutoutPixels(d,w,h,tol){
+  const at=(x,y)=>(y*w+x)*4;
+  const edge=[];
+  for(let x=0;x<w;x++){edge.push(at(x,0),at(x,h-1))}
+  for(let y=0;y<h;y++){edge.push(at(0,y),at(w-1,y))}
+  const med=ch=>{const v=edge.map(i=>d[i+ch]).sort((a,b)=>a-b);return v[v.length>>1]};
+  const br=med(0),bg=med(1),bb=med(2);
+  const near=i=>{const dr=d[i]-br,dg=d[i+1]-bg,db=d[i+2]-bb;return Math.sqrt(dr*dr+dg*dg+db*db)<tol};
+  const bgMask=new Uint8Array(w*h),q=[];
+  const seed=p=>{if(!bgMask[p/4]&&near(p)){bgMask[p/4]=1;q.push(p/4)}};
+  for(let x=0;x<w;x++){seed(at(x,0));seed(at(x,h-1))}
+  for(let y=0;y<h;y++){seed(at(0,y));seed(at(w-1,y))}
+  for(let qi=0;qi<q.length;qi++){
+    const p=q[qi],x=p%w,y=(p-x)/w;
+    const nb=[[x+1,y],[x-1,y],[x,y+1],[x,y-1]];
+    for(const [nx,ny] of nb){
+      if(nx<0||ny<0||nx>=w||ny>=h)continue;
+      const k=ny*w+nx;
+      if(!bgMask[k]&&near(k*4)){bgMask[k]=1;q.push(k)}
+    }
+  }
+  for(let k=0;k<w*h;k++){
+    if(bgMask[k]){d[k*4+3]=0;continue}
+    const x=k%w,y=(k-x)/w;
+    const touches=(x>0&&bgMask[k-1])||(x<w-1&&bgMask[k+1])||(y>0&&bgMask[k-w])||(y<h-1&&bgMask[k+w]);
+    if(touches)d[k*4+3]=Math.min(d[k*4+3],180);   // soften the edge
+  }
+  return d;
+}
+async function cutoutBlobOf(file){
+  try{
+    if(typeof createImageBitmap!=="function")return file;
+    const bmp=await createImageBitmap(file);
+    const k=Math.min(1,700/Math.max(bmp.width,bmp.height));
+    const w=Math.max(1,Math.round(bmp.width*k)),h=Math.max(1,Math.round(bmp.height*k));
+    const c=document.createElement("canvas");c.width=w;c.height=h;
+    const g=c.getContext("2d",{willReadFrequently:true});
+    g.drawImage(bmp,0,0,w,h);
+    const im=g.getImageData(0,0,w,h),d=im.data;
+    const corner=i=>d[i+3];
+    const corners=[0,(w-1)*4,(h-1)*w*4,((h-1)*w+w-1)*4];
+    if(corners.some(i=>corner(i)<200))return file;   // already has transparency: keep as is
+    cutoutPixels(d,w,h,48);
+    g.putImageData(im,0,0);
+    const blob=await new Promise(r=>c.toBlob(r,"image/png"));
+    return blob||file;
+  }catch(e){return file}
+}
+
+let cutOn=true;
 $("#bgAdd").onclick=()=>$("#bgFile").click();
+$("#bgCut").checked=(()=>{try{return localStorage.getItem("hrms_bg_cut")!=="0"}catch(e){return true}})();
+$("#bgCut").onchange=e=>{try{localStorage.setItem("hrms_bg_cut",e.target.checked?"1":"0")}catch(x){}};
+
 $("#bgFile").onchange=async e=>{
   const files=[...e.target.files];e.target.value="";if(!files.length)return;
+  cutOn=$("#bgCut").checked;
   if(!window.indexedDB){toast("This browser cannot store images.");return}
   let all=[];try{all=await BGDB.all()}catch(x){}
   const have=all.filter(r=>r.theme===bgKey()).length;
@@ -1886,7 +1943,7 @@ $("#bgFile").onchange=async e=>{
     if(!/^image\//.test(f.type)){toast(f.name+" is not an image.");continue}
     if(f.size>8*1024*1024){toast(f.name+" is larger than 8 MB.");continue}
     if(have+added>=8){toast("Up to 8 images per theme.");break}
-    try{await BGDB.add({theme:bgKey(),name:f.name.replace(/\.[^.]+$/,"").slice(0,30),blob:f});added++}catch(x){}
+    try{const blob=cutOn?await cutoutBlobOf(f):f;await BGDB.add({theme:bgKey(),name:f.name.replace(/\.[^.]+$/,"").slice(0,30),blob});added++}catch(x){}
   }
   bgShift=0;await bgRender();if(added)toast(added+" image"+(added>1?"s":"")+" added");
 };
