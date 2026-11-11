@@ -516,6 +516,20 @@ body[data-role="user"] [data-t="mas"],body[data-role="user"] [data-t="sql"],body
 :root[data-theme="comic"] .tpa{font-family:"Bangers",Impact,sans-serif;font-weight:400;letter-spacing:.5px;font-size:15px}
 :root[data-theme="comic"] .tsug{border:2px dashed #111;background:#fff8c9}
 :root[data-theme="comic"] .lgd i{border:2px solid #111;border-radius:0}
+#t_list li{min-width:0;overflow-wrap:anywhere}
+.today{min-width:0;overflow:hidden}
+.side,.cols{min-width:0}
+.tl{min-width:0;gap:6px}
+.tl b{min-width:0;overflow-wrap:anywhere}
+.sub{min-width:0;overflow-wrap:anywhere;flex-wrap:wrap}
+#t_list .st{white-space:normal;max-width:100%}
+#t_list .rm{overflow-wrap:anywhere}
+.hbg{position:absolute!important;z-index:0!important;right:0;top:0;bottom:0;width:48%;pointer-events:none;overflow:hidden;border-radius:inherit}
+.hbgi{position:absolute;bottom:0;height:92%;width:auto;max-width:42%;object-fit:contain;opacity:.92;filter:drop-shadow(0 6px 10px rgba(0,0,0,.28));right:calc(var(--i,0) * 22%);transform:translateX(calc(var(--i,0) * 6%))}
+.hbgi:nth-child(1){z-index:3}.hbgi:nth-child(2){z-index:2;height:80%}.hbgi:nth-child(3){z-index:1;height:70%}
+@media(max-width:700px){.hbg{width:60%;opacity:.45}}
+.bgthumb{width:40px;height:40px;object-fit:cover;border-radius:6px;border:2px solid var(--line);vertical-align:middle}
+.bgrow{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -542,7 +556,7 @@ body[data-role="user"] [data-t="mas"],body[data-role="user"] [data-t="sql"],body
 
 <section class="tab on" id="dash"><div class="dgrid"><div class="dcbar sp12" id="dcBar"><button type="button" class="btn sm ghost" id="dcEdit" style="display:none">Customise dashboard</button><div id="dcTools"><span class="muted" style="font-size:12px">Drag a widget by its &#9776; handle, or use the arrows. Remove with &times;, add back below.</span><button type="button" class="btn sm ghost" id="dcAddBtn">+ Add widget</button><button type="button" class="btn sm ghost" id="dcReset">Reset layout</button><button type="button" class="btn sm" id="dcDone">Done</button></div><div id="dcAdd"></div></div>
 <div class="card fbn" id="festBanner" role="status" aria-live="polite"></div>
-  <div class="hero sp8">
+  <div class="hero sp8"><div class="hbg" id="heroBg" aria-hidden="true"></div>
     <div>
       <div class="hl"><span id="d_greet">Welcome</span><span id="d_name"></span></div>
       <div class="hs" id="d_date"></div><div class="hs" id="d_hs2"></div>
@@ -706,6 +720,13 @@ body[data-role="user"] [data-t="mas"],body[data-role="user"] [data-t="sql"],body
     <div class="tpl-list" id="mineList" style="margin-top:8px"></div>
     <label style="flex-direction:row;align-items:center;gap:8px;margin-top:10px;color:var(--ink);font-weight:500"><input type="checkbox" id="builtinToggle" style="width:auto"> Also show the built-in characters and animals</label>
     <p class="muted" style="font-size:11px;margin:6px 0 0">Pick image or GIF files from your computer. They stay in this browser only.</p></div>
+  <div style="margin-top:12px"><div class="muted" style="font-size:13px;font-weight:600;margin-bottom:6px">Welcome card characters</div>
+    <label style="flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-weight:500"><input type="checkbox" id="bgOn" style="width:auto"> Show characters on the welcome card</label>
+    <div class="row" style="margin-top:8px"><button type="button" class="btn sm ghost" id="bgAdd">Add images or GIFs</button><button type="button" class="btn sm ghost" id="bgShuffle">Change which show</button></div>
+    <input type="file" id="bgFile" accept="image/*" multiple style="display:none">
+    <div class="muted" id="bgInfo" style="font-size:12px;margin-top:6px"></div>
+    <div id="bgThumbs" style="margin-top:4px"></div>
+    <p class="muted" style="font-size:11px;margin:6px 0 0">Up to three show at once, and images are kept per theme in this browser. Use your own pictures, since the copyrighted characters are not included.</p></div>
   <div style="margin-top:12px"><div class="muted" style="font-size:13px;font-weight:600;margin-bottom:6px">Text colour</div><div class="sw" id="inkSw"></div></div>
   <p class="muted" style="font-size:11px;margin:12px 0 0">Animal pets and celebration stickers: Noto animated emoji by Google, CC BY 4.0. Anime-style pets are original drawings. Weather data: Open-Meteo.com (CC BY 4.0).</p>
   <div class="row" style="margin-top:12px"><button class="btn ghost" id="styCust" type="button">Customise dashboard</button></div>
@@ -776,7 +797,7 @@ function loadComicFonts(){
   l.href="https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:wght@400;700&display=swap";
   document.head.appendChild(l);
 }
-function setTheme(t){if(t==="comic")loadComicFonts();document.documentElement.dataset.theme=t;$("#themeSel").value=t;try{localStorage.setItem("hrms_theme",t)}catch(e){}}
+function setTheme(t){if(t==="comic")loadComicFonts();setTimeout(()=>{if(typeof bgRender==="function")bgRender()},0);document.documentElement.dataset.theme=t;$("#themeSel").value=t;try{localStorage.setItem("hrms_theme",t)}catch(e){}}
 $("#themeSel").innerHTML=THEMES.slice().sort((a,b)=>a[1].localeCompare(b[1])).map(x=>`<option value="${x[0]}">${x[1].replace("&","&amp;")}</option>`).join("");
 $("#themeSel").onchange=e=>setTheme(e.target.value);
 setTheme(THEMES.some(x=>x[0]===document.documentElement.dataset.theme)?document.documentElement.dataset.theme:"light");
@@ -1819,6 +1840,60 @@ function dashInit(){
   g.addEventListener("drop",e=>{if(dragEl)e.preventDefault()});
   g.addEventListener("dragend",()=>{if(dragEl){dragEl.classList.remove("dragging");dragEl=null;dashSave()}});
 })();
+
+// ---------- welcome-card characters: your own images, per theme, changeable ----------
+const BGDB={
+  open(){return new Promise((res,rej)=>{const r=indexedDB.open("hrms_backdrops",1);r.onupgradeneeded=()=>r.result.createObjectStore("imgs",{keyPath:"id",autoIncrement:true});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})},
+  async all(){const d=await this.open();return new Promise(res=>{const q=d.transaction("imgs").objectStore("imgs").getAll();q.onsuccess=()=>res(q.result||[]);q.onerror=()=>res([])})},
+  async add(rec){const d=await this.open();return new Promise((res,rej)=>{const t=d.transaction("imgs","readwrite");const q=t.objectStore("imgs").add(rec);t.oncomplete=()=>res(q.result);t.onerror=()=>rej(t.error)})},
+  async del(id){const d=await this.open();return new Promise(res=>{const t=d.transaction("imgs","readwrite");t.objectStore("imgs").delete(id);t.oncomplete=()=>res()})}
+};
+let bgUrls=[],bgShift=0,bgThumbUrls=[];
+function bgKey(){return document.documentElement.dataset.theme||"light"}
+let bgSeq=0;
+async function bgRender(){
+  const box=document.getElementById("heroBg");if(!box)return;
+  const seq=++bgSeq;
+  let on=true;try{on=localStorage.getItem("hrms_bg_on")!=="0"}catch(e){}
+  const cb=document.getElementById("bgOn");if(cb)cb.checked=on;
+  let all=[];if(window.indexedDB){try{all=await BGDB.all()}catch(e){}}
+  if(seq!==bgSeq)return;   // a newer render is in charge; never draw twice
+  bgUrls.forEach(u=>URL.revokeObjectURL(u));bgUrls=[];box.innerHTML="";
+  const mine=all.filter(r=>r.theme===bgKey()).sort((a,b)=>a.id-b.id);
+  bgInfo(all,mine.length);
+  if(!on||!mine.length)return;
+  for(let i=0;i<Math.min(3,mine.length);i++){
+    const r=mine[(bgShift+i)%mine.length],u=URL.createObjectURL(r.blob);bgUrls.push(u);
+    const im=document.createElement("img");im.className="hbgi";im.alt="";im.src=u;im.style.setProperty("--i",i);box.appendChild(im);
+  }
+}
+function bgInfo(all,n){
+  const info=document.getElementById("bgInfo");if(!info)return;
+  info.textContent=n+(n===1?" image":" images")+" for this theme  \u00B7  "+all.length+" in total";
+  bgThumbUrls.forEach(u=>URL.revokeObjectURL(u));bgThumbUrls=[];
+  const list=document.getElementById("bgThumbs");if(!list)return;
+  const mine=all.filter(r=>r.theme===bgKey()).sort((a,b)=>a.id-b.id);
+  list.innerHTML=mine.map(r=>{const u=URL.createObjectURL(r.blob);bgThumbUrls.push(u);return '<div class="bgrow"><img class="bgthumb" alt="" src="'+u+'"><span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(r.name||"Image")+'</span><button type="button" class="tpx" data-id="'+r.id+'" aria-label="Remove image">&times;</button></div>'}).join("")||'<p class="muted" style="font-size:12px;margin:4px 0 0">No images for this theme yet. Add a few characters (images or GIFs) and they will appear on the welcome card.</p>';
+}
+$("#bgAdd").onclick=()=>$("#bgFile").click();
+$("#bgFile").onchange=async e=>{
+  const files=[...e.target.files];e.target.value="";if(!files.length)return;
+  if(!window.indexedDB){toast("This browser cannot store images.");return}
+  let all=[];try{all=await BGDB.all()}catch(x){}
+  const have=all.filter(r=>r.theme===bgKey()).length;
+  let added=0;
+  for(const f of files){
+    if(!/^image\//.test(f.type)){toast(f.name+" is not an image.");continue}
+    if(f.size>8*1024*1024){toast(f.name+" is larger than 8 MB.");continue}
+    if(have+added>=8){toast("Up to 8 images per theme.");break}
+    try{await BGDB.add({theme:bgKey(),name:f.name.replace(/\.[^.]+$/,"").slice(0,30),blob:f});added++}catch(x){}
+  }
+  bgShift=0;await bgRender();if(added)toast(added+" image"+(added>1?"s":"")+" added");
+};
+$("#bgThumbs").addEventListener("click",async e=>{const b=e.target.closest&&e.target.closest("button[data-id]");if(!b)return;await BGDB.del(+b.dataset.id);toast("Image removed");bgRender()});
+$("#bgShuffle").onclick=()=>{bgShift++;bgRender()};
+$("#bgOn").onchange=e=>{try{localStorage.setItem("hrms_bg_on",e.target.checked?"1":"0")}catch(x){}bgRender()};
+bgRender();
 
 // records
 $("#r_day").value=today();$("#r_month").value=today().slice(0,7);
